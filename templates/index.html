@@ -34,51 +34,6 @@
 
     <!-- Main Container -->
     <main class="main-content">
-        <!-- Dashboard Statistics -->
-        <section class="dashboard-section" aria-label="గ్రామ పంచాయతీ వివరాలు">
-            <div class="stats-grid">
-                <div class="stat-card highlight">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-info">
-                        <span class="stat-label">మొత్తం ఓటర్లు</span>
-                        <span class="stat-value">{{ stats.total_voters }}</span>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🏡</div>
-                    <div class="stat-info">
-                        <span class="stat-label">గ్రామం</span>
-                        <span class="stat-value">{{ stats.village }}</span>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📍</div>
-                    <div class="stat-info">
-                        <span class="stat-label">మండలం</span>
-                        <span class="stat-value">{{ stats.mandal }}</span>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🏢</div>
-                    <div class="stat-info">
-                        <span class="stat-label">జిల్లా</span>
-                        <span class="stat-value">{{ stats.district }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Additional Stats Bar -->
-            <div class="stats-subbar">
-                <span class="subbar-item"><strong>వార్డులు:</strong> {{ stats.wards }}</span>
-                <span class="subbar-divider">|</span>
-                <span class="subbar-item"><strong>పురుషులు:</strong> {{ stats.males }}</span>
-                <span class="subbar-divider">|</span>
-                <span class="subbar-item"><strong>స్త్రీలు:</strong> {{ stats.females }}</span>
-                <span class="subbar-divider">|</span>
-                <span class="subbar-item"><strong>ప్రచురణ తేదీ:</strong> 18-03-2026</span>
-            </div>
-        </section>
-
         <!-- Voter Search Box -->
         <section class="search-section">
             <div class="search-card">
@@ -228,6 +183,22 @@
                     <span class="disclaimer-icon">ℹ️</span>
                     <span class="disclaimer-text">అనధికారిక ఓటరు సమాచారం ప్రతీ — గుర్తింపు పత్రం కాదు</span>
                 </div>
+            </div>
+        </section>
+
+        <!-- Village information is placed after the search and results. -->
+        <section class="dashboard-section" aria-label="గ్రామ పంచాయతీ వివరాలు">
+            <div class="stats-grid">
+                <div class="stat-card highlight"><div class="stat-icon">👥</div><div class="stat-info"><span class="stat-label">మొత్తం ఓటర్లు</span><span class="stat-value">{{ stats.total_voters }}</span></div></div>
+                <div class="stat-card"><div class="stat-icon">🏡</div><div class="stat-info"><span class="stat-label">గ్రామం</span><span class="stat-value">{{ stats.village }}</span></div></div>
+                <div class="stat-card"><div class="stat-icon">📍</div><div class="stat-info"><span class="stat-label">మండలం</span><span class="stat-value">{{ stats.mandal }}</span></div></div>
+                <div class="stat-card"><div class="stat-icon">🏢</div><div class="stat-info"><span class="stat-label">జిల్లా</span><span class="stat-value">{{ stats.district }}</span></div></div>
+            </div>
+            <div class="stats-subbar">
+                <span class="subbar-item"><strong>వార్డులు:</strong> {{ stats.wards }}</span><span class="subbar-divider">|</span>
+                <span class="subbar-item"><strong>పురుషులు:</strong> {{ stats.males }}</span><span class="subbar-divider">|</span>
+                <span class="subbar-item"><strong>స్త్రీలు:</strong> {{ stats.females }}</span><span class="subbar-divider">|</span>
+                <span class="subbar-item"><strong>ప్రచురణ తేదీ:</strong> 18-03-2026</span>
             </div>
         </section>
     </main>
