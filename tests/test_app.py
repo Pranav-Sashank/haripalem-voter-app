@@ -6,11 +6,12 @@ Validates all endpoints, edge cases, error conditions, and the 16 mandatory test
 import os
 import sys
 import json
+from werkzeug.security import generate_password_hash
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.stdout.reconfigure(encoding='utf-8')
 TEST_ACCESS_PASSWORD = 'test-only-password'
-os.environ['ACCESS_PASSWORD'] = TEST_ACCESS_PASSWORD
+os.environ['ACCESS_PASSWORD_HASH'] = generate_password_hash(TEST_ACCESS_PASSWORD)
 
 from app import app
 from services.pdf_processor import get_village_statistics

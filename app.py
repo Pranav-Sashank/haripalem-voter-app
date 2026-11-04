@@ -5,15 +5,15 @@ Flask Web Application.
 
 import os
 import io
-import hmac
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, send_file, abort, redirect, session, url_for
+from werkzeug.security import check_password_hash
 from services.pdf_processor import init_database, get_voter_by_serial, get_village_statistics, search_voters
 from services.voter_extractor import extract_voter_preview_base64, extract_voter_preview_bytes
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(32))
-ACCESS_PASSWORD = os.environ.get('ACCESS_PASSWORD')
+ACCESS_PASSWORD_HASH = os.environ.get('ACCESS_PASSWORD_HASH')
 
 def format_display_text(value):
     """Remove PDF text-extraction artifacts without changing actual voter data."""
@@ -70,7 +70,7 @@ def login():
     error = None
     if request.method == 'POST':
         submitted_password = request.form.get('password', '')
-        if ACCESS_PASSWORD and hmac.compare_digest(submitted_password, ACCESS_PASSWORD):
+        if ACCESS_PASSWORD_HASH and check_password_hash(ACCESS_PASSWORD_HASH, submitted_password):
             session.clear()
             session['authenticated'] = True
             session.permanent = True
