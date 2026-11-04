@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+scratch/
+generated/*
+!generated/.gitkeep
+.DS_Store
+Thumbs.db

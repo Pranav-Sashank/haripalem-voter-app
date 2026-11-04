@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="theme-color" content="#1b5e20">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="హరిపాలెం ఓటర్లు">
+    <title>హరిపాలెం గ్రామ పంచాయతీ – ఓటరు వివరాల శోధన వ్యవస్థ – 2026</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Google Fonts for Telugu -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Top Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="header-emblem">
+                <div class="emblem-circle">
+                    <span class="emblem-icon">🏛️</span>
+                </div>
+            </div>
+            <div class="header-titles">
+                <h1 class="main-title">హరిపాలెం గ్రామ పంచాయతీ</h1>
+                <p class="sub-title">ఓటరు వివరాల శోధన వ్యవస్థ – 2026</p>
+                <p class="constituency-tag">యలమంచిలి శాసనసభ నియోజకవర్గము &bull; అనకాపల్లి జిల్లా</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+        <!-- Dashboard Statistics -->
+        <section class="dashboard-section" aria-label="గ్రామ పంచాయతీ వివరాలు">
+            <div class="stats-grid">
+                <div class="stat-card highlight">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <span class="stat-label">మొత్తం ఓటర్లు</span>
+                        <span class="stat-value">{{ stats.total_voters }}</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏡</div>
+                    <div class="stat-info">
+                        <span class="stat-label">గ్రామం</span>
+                        <span class="stat-value">{{ stats.village }}</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📍</div>
+                    <div class="stat-info">
+                        <span class="stat-label">మండలం</span>
+                        <span class="stat-value">{{ stats.mandal }}</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏢</div>
+                    <div class="stat-info">
+                        <span class="stat-label">జిల్లా</span>
+                        <span class="stat-value">{{ stats.district }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Stats Bar -->
+            <div class="stats-subbar">
+                <span class="subbar-item"><strong>వార్డులు:</strong> {{ stats.wards }}</span>
+                <span class="subbar-divider">|</span>
+                <span class="subbar-item"><strong>పురుషులు:</strong> {{ stats.males }}</span>
+                <span class="subbar-divider">|</span>
+                <span class="subbar-item"><strong>స్త్రీలు:</strong> {{ stats.females }}</span>
+                <span class="subbar-divider">|</span>
+                <span class="subbar-item"><strong>ప్రచురణ తేదీ:</strong> 18-03-2026</span>
+            </div>
+        </section>
+
+        <!-- Voter Search Box -->
+        <section class="search-section">
+            <div class="search-card">
+                <div class="section-heading-wrap">
+                    <h2 class="section-heading">ఓటరు శోధన</h2>
+                    <p class="search-desc">ఓటరు జాబితాలోని వరుస సంఖ్య (1 నుండి 2856 వరకు) నమోదు చేసి అసలు ఓటరు వివరాలు మరియు పి.డి.ఎఫ్ పత్రం పొందండి.</p>
+                </div>
+
+                <form id="voterSearchForm" class="search-form" onsubmit="handleSearch(event);">
+                    <div class="input-group">
+                        <label for="serialNumberInput" class="input-label">ఓటరు వరుస సంఖ్య నమోదు చేయండి</label>
+                        <div class="input-row">
+                            <div class="input-wrapper">
+                                <span class="input-icon">🔍</span>
+                                <input 
+                                    type="number" 
+                                    inputmode="numeric"
+                                    pattern="[0-9]*"
+                                    id="serialNumberInput" 
+                                    name="serial_number" 
+                                    class="search-input" 
+                                    placeholder="ఓటరు వరుస సంఖ్యను నమోదు చేయండి" 
+                                    min="1" 
+                                    max="2856"
+                                    required 
+                                    autocomplete="off"
+                                >
+                            </div>
+                            <button type="submit" id="searchBtn" class="btn btn-primary">
+                                <span class="btn-text">వివరాలు వెతకండి</span>
+                                <span class="btn-spinner" style="display: none;"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Quick Test Numbers -->
+                <div class="quick-test-wrap">
+                    <span class="quick-test-label">ముఖ్యమైన వరుస సంఖ్యలు (పరీక్షార్థం):</span>
+                    <div class="chips-list">
+                        {% for num in [1, 2, 27, 28, 54, 72, 238, 239, 476, 952, 1190, 1428, 1904, 2380, 2618, 2856] %}
+                        <button type="button" class="chip-btn" onclick="quickSearch({{ num }});">{{ num }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Error Box -->
+                <div id="errorBox" class="alert alert-error" style="display: none;">
+                    <span class="alert-icon">⚠️</span>
+                    <span id="errorMessage" class="alert-text"></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading State -->
+        <div id="loadingBox" class="loading-container" style="display: none;">
+            <div class="spinner"></div>
+            <p class="loading-text">వివరాలు వెతుకుతున్నాము... దయచేసి వేచి ఉండండి...</p>
+        </div>
+
+        <!-- Result Section -->
+        <section id="resultSection" class="result-section" style="display: none;">
+            <div class="result-card">
+                <div class="result-header">
+                    <div class="result-title-group">
+                        <span class="badge-success">ఓటరు వివరాలు లభ్యమైనవి</span>
+                        <h3 class="result-voter-title" id="resultVoterTitle">ఓటరు వివరాలు</h3>
+                    </div>
+                    <div class="result-actions">
+                        <a id="downloadPdfBtn" href="#" class="btn btn-download" download>
+                            <span class="download-icon">📥</span>
+                            <span class="download-text">PDF డౌన్లోడ్ చేయండి</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="result-body-grid">
+                    <!-- Column 1: Original Entry Preview -->
+                    <div class="preview-panel">
+                        <div class="panel-header">
+                            <h4 class="panel-title">అసలు ఓటరు జాబితా ప్రవేశం (అసలు ముద్రణ)</h4>
+                            <span class="panel-badge">అసలు ప్రతి రూపం</span>
+                        </div>
+                        <div class="preview-image-box">
+                            <img id="voterEntryImage" src="" alt="ఓటరు నమోదు అసలు చిత్రం" class="entry-preview-img">
+                        </div>
+                        <div class="preview-caption">
+                            <span>అసలు పి.డి.ఎఫ్ నుండి నేరుగా సేకరించబడిన ప్రవేశం (పుట సంఖ్య: <strong id="pdfPageNo">-</strong>, వరుస: <strong id="pdfRowNo">-</strong>, నిలువు వరుస: <strong id="pdfColNo">-</strong>)</span>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Structured Details Table -->
+                    <div class="details-panel">
+                        <div class="panel-header">
+                            <h4 class="panel-title">ఓటరు పూర్తి సమాచారం</h4>
+                            <span class="panel-badge ward-badge" id="wardBadge">వార్డు: -</span>
+                        </div>
+                        <div class="details-table-wrapper">
+                            <table class="details-table">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row">ఓటరు వరుస సంఖ్య</th>
+                                        <td id="detailSerialNo" class="highlight-cell">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">ఓటరు పేరు</th>
+                                        <td id="detailVoterName" class="bold-cell">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row" id="detailRelativeLabel">తండ్రి పేరు / భర్త పేరు / తల్లి పేరు</th>
+                                        <td id="detailRelativeName">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">వయస్సు</th>
+                                        <td id="detailAge">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">లింగము</th>
+                                        <td id="detailGender">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">ఇంటి సంఖ్య</th>
+                                        <td id="detailHouseNo">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">ఓటరు ఐడి కార్డు నంబరు</th>
+                                        <td id="detailVoterId" class="voter-id-cell">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">అసెంబ్లీ ఓటరు జాబితా సంఖ్య</th>
+                                        <td id="detailAssemblySerial">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">వార్డు నెంబరు</th>
+                                        <td id="detailWardNo">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Secondary Download Button in Details Panel -->
+                        <div class="details-footer">
+                            <a id="downloadPdfBtnSecondary" href="#" class="btn btn-download btn-block" download>
+                                <span class="download-icon">📥</span>
+                                <span class="download-text">PDF డౌన్లోడ్ చేయండి</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legal / Unofficial Disclaimer Footer -->
+                <div class="disclaimer-bar">
+                    <span class="disclaimer-icon">ℹ️</span>
+                    <span class="disclaimer-text">అనధికారిక ఓటరు సమాచారం ప్రతీ — గుర్తింపు పత్రం కాదు</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="footer-container">
+            <p class="footer-title">హరిపాలెం గ్రామ పంచాయతీ &bull; అచ్యుతాపురం మండలం &bull; అనకాపల్లి జిల్లా</p>
+            <p class="footer-note">ఈ వ్యవస్థ అసలు ఓటరు జాబితా 2026 పి.డి.ఎఫ్ నుండి నేరుగా సమాచారాన్ని అందిస్తుంది. ఏ వివరాలూ మార్చబడవు.</p>
+            <p class="footer-disclaimer">గమనిక: అనధికారిక ఓటరు సమాచారం ప్రతీ — ఇది అధికారిక గుర్తింపు పత్రం కాదు.</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
