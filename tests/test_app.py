@@ -40,36 +40,36 @@ def test_search_validations():
     client = app.test_client()
     
     # 1. Empty input
-    resp = client.post('/search', json={'serial_number': ''})
+    resp = client.post('/search', json={'query': ''})
     assert resp.status_code == 400
     data = json.loads(resp.data)
     assert data['success'] is False
-    assert 'దయచేసి ఓటరు వరుస సంఖ్యను నమోదు చేయండి' in data['error']
+    assert 'వరుస సంఖ్య, పేరు లేదా ఓటరు ఐడి' in data['error']
     print("  ✓ Empty input validation passed.")
 
-    # 2. Non-numeric
-    resp = client.post('/search', json={'serial_number': 'abc'})
-    assert resp.status_code == 400
-    data = json.loads(resp.data)
-    assert data['success'] is False
-    assert 'సరైన సంఖ్యను నమోదు చేయండి' in data['error']
-    print("  ✓ Non-numeric validation passed.")
-
-    # 3. Low boundary (< 1)
-    resp = client.post('/search', json={'serial_number': 0})
+    # 2. Low boundary (< 1)
+    resp = client.post('/search', json={'query': 0})
     assert resp.status_code == 400
     data = json.loads(resp.data)
     assert data['success'] is False
     assert '1 నుండి 2856 మధ్య మాత్రమే ఉండాలి' in data['error']
     print("  ✓ Out of bounds (0) validation passed.")
 
-    # 4. High boundary (> 2856)
-    resp = client.post('/search', json={'serial_number': 2857})
+    # 3. High boundary (> 2856)
+    resp = client.post('/search', json={'query': 2857})
     assert resp.status_code == 400
     data = json.loads(resp.data)
     assert data['success'] is False
     assert '1 నుండి 2856 మధ్య మాత్రమే ఉండాలి' in data['error']
     print("  ✓ Out of bounds (2857) validation passed.")
+
+    # 4. Name searches are valid and return a record or a selection list.
+    resp = client.post('/search', json={'query': 'సత్యవతీ'})
+    assert resp.status_code == 200
+    data = json.loads(resp.data)
+    assert data['success'] is True
+    assert data['match_type'] in ('exact', 'list')
+    print("  ✓ Name search passed.")
 
 REQUIRED_TEST_SERIALS = [
     (1, 3, 0, 0, 'సత్యవతీ పైలా', 'XOO0422949'),
@@ -96,7 +96,7 @@ def test_all_16_required_serials():
 
     for sl, exp_page, exp_row, exp_col, exp_name_sub, exp_id in REQUIRED_TEST_SERIALS:
         # 1. Search endpoint
-        resp = client.post('/search', json={'serial_number': sl})
+        resp = client.post('/search', json={'query': sl})
         assert resp.status_code == 200, f"Search failed for serial {sl}"
         data = json.loads(resp.data)
         assert data['success'] is True
@@ -118,18 +118,10 @@ def test_all_16_required_serials():
         assert prev_resp.mimetype == 'image/png'
         assert len(prev_resp.data) > 1000
         
-        # 3. Download PDF endpoint
-        dl_resp = client.get(f'/download/{sl}')
-        assert dl_resp.status_code == 200, f"Download failed for {sl}"
-        assert dl_resp.mimetype == 'application/pdf'
-        assert len(dl_resp.data) > 1000
-        
-        # Verify PDF integrity and mandatory footer
-        pdf_doc = fitz.open(stream=dl_resp.data, filetype='pdf')
-        assert len(pdf_doc) == 1, f"Expected 1 page PDF for {sl}, got {len(pdf_doc)}"
-        page_text = pdf_doc[0].get_text()
-        assert 'అనధికారిక' in page_text and 'గుర్తింపు' in page_text, f"Missing footer in PDF for {sl}"
-        pdf_doc.close()
+        # 3. Printer-friendly page replaces generated PDF downloads.
+        print_resp = client.get(f'/print/{sl}')
+        assert print_resp.status_code == 200, f"Print page failed for {sl}"
+        assert 'ప్రింట్ చేయండి'.encode('utf-8') in print_resp.data
         
         print(f"  ✓ SL {sl:4d}: Page {exp_page:3d} (r={exp_row}, c={exp_col}) -> {voter['voter_name']} ({exp_id}) verified.")
 

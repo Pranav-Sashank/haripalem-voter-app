@@ -6,16 +6,44 @@ Flask Web Application.
 import os
 import io
 from flask import Flask, render_template, request, jsonify, send_file, abort
-from services.pdf_processor import (
-    init_database,
-    get_voter_by_serial,
-    get_village_statistics
-)
+from services.pdf_processor import init_database, get_voter_by_serial, get_village_statistics, search_voters
 from services.voter_extractor import extract_voter_preview_base64, extract_voter_preview_bytes
-from services.pdf_generator import generate_voter_pdf
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'haripalem-voter-secret-key-2026'
+
+def format_display_text(value):
+    """Remove PDF text-extraction artifacts without changing actual voter data."""
+    if not value:
+        return value
+    text = ' '.join(str(value).split())
+    # Collapse duplicated Telugu vowel marks produced by the source PDF text layer.
+    import re
+    text = re.sub(r'([\u0C3E-\u0C4D])\1+', r'\1', text)
+    parts = text.split(' ')
+    fixed = []
+    index = 0
+    while index < len(parts):
+        part = parts[index]
+        # A detached conjunct such as "ప్ర ణవ్" is a single word in the card.
+        if index + 1 < len(parts) and len(part) <= 3 and '\u0c4d' in part:
+            fixed.append(part + parts[index + 1])
+            index += 2
+            continue
+        # A PDF line wrap can split the common surname ending "కాండ్రే గుల".
+        if index + 1 < len(parts) and parts[index + 1] == 'గుల' and '\u0c4d' in part:
+            fixed.append(part + parts[index + 1])
+            index += 2
+            continue
+        fixed.append(part)
+        index += 1
+    return ' '.join(fixed)
+
+def format_voter_for_display(voter):
+    voter = dict(voter)
+    for field in ('voter_name', 'relative_name'):
+        voter[field] = format_display_text(voter.get(field))
+    return voter
 
 # Ensure database is initialized on startup
 with app.app_context():
@@ -38,63 +66,55 @@ def search_voter():
     """
     if request.is_json:
         data = request.get_json() or {}
-        raw_val = data.get('serial_number')
+        raw_val = data.get('query')
     else:
-        raw_val = request.form.get('serial_number')
+        raw_val = request.form.get('query')
 
     if raw_val is None or str(raw_val).strip() == '':
         return jsonify({
             'success': False,
-            'error': 'దయచేసి ఓటరు వరుస సంఖ్యను నమోదు చేయండి.'
+            'error': 'దయచేసి వరుస సంఖ్య, పేరు లేదా ఓటరు ఐడి నమోదు చేయండి.'
         }), 400
 
-    raw_str = str(raw_val).strip()
-    if not raw_str.isdigit():
-        return jsonify({
-            'success': False,
-            'error': 'దయచేసి సరైన సంఖ్యను నమోదు చేయండి. అక్షరాలు లేదా ప్రత్యేక గుర్తులు అనుమతించబడవు.'
-        }), 400
-
-    serial_no = int(raw_str)
-    if serial_no < 1 or serial_no > 2856:
+    query = str(raw_val).strip()
+    if query.isdigit() and not 1 <= int(query) <= 2856:
         return jsonify({
             'success': False,
             'error': 'ఓటరు వరుస సంఖ్య 1 నుండి 2856 మధ్య మాత్రమే ఉండాలి.'
         }), 400
 
-    voter, preview_image = extract_voter_preview_base64(serial_no)
-    if not voter:
+    match_type, voters = search_voters(query)
+    if match_type == 'none':
         return jsonify({
             'success': False,
-            'error': f'వరుస సంఖ్య {serial_no} తో ఓటరు వివరాలు లభించలేదు.'
+            'error': 'మీ శోధనకు సరిపోయే ఓటరు వివరాలు లభించలేదు.'
         }), 404
+
+    if match_type == 'list':
+        return jsonify({
+            'success': True,
+            'match_type': 'list',
+            'voters': [format_voter_for_display(voter) for voter in voters]
+        })
+
+    voter, preview_image = extract_voter_preview_base64(voters[0]['serial_no'])
+    voter = format_voter_for_display(voter)
 
     return jsonify({
         'success': True,
+        'match_type': 'exact',
         'voter': voter,
         'preview_image': preview_image,
-        'download_url': f'/download/{serial_no}'
+        'print_url': f'/print/{voter["serial_no"]}'
     })
 
-@app.route('/download/<int:serial_number>', methods=['GET'])
-def download_voter_pdf(serial_number):
-    """
-    Download standalone PDF for the given voter serial number.
-    Extracts the exact original entry preserving typography, borders, and photo.
-    """
-    if serial_number < 1 or serial_number > 2856:
-        return "చెల్లని ఓటరు వరుస సంఖ్య. 1 నుండి 2856 మధ్య మాత్రమే అనుమతించబడుతుంది.", 400
-
-    out_path, pdf_bytes = generate_voter_pdf(serial_number)
-    if not pdf_bytes:
-        return f"వరుస సంఖ్య {serial_number} కొరకు పి.డి.ఎఫ్ తయారు చేయడం సాధ్యం కాలేదు.", 404
-
-    return send_file(
-        io.BytesIO(pdf_bytes),
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f'haripalem_voter_{serial_number}.pdf'
-    )
+@app.route('/print/<int:serial_number>', methods=['GET'])
+def print_voter(serial_number):
+    """Show a printer-friendly voter record; the browser handles printing."""
+    voter = get_voter_by_serial(serial_number)
+    if not voter:
+        abort(404)
+    return render_template('print.html', voter=voter)
 
 @app.route('/preview/<int:serial_number>', methods=['GET'])
 def preview_voter_image(serial_number):
@@ -139,4 +159,4 @@ def not_found(e):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"Starting Haripalem Voter Web App on port {port}...")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='127.0.0.1', port=port, debug=False)

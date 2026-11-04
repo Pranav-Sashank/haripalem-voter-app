@@ -84,25 +84,22 @@
             <div class="search-card">
                 <div class="section-heading-wrap">
                     <h2 class="section-heading">ఓటరు శోధన</h2>
-                    <p class="search-desc">ఓటరు జాబితాలోని వరుస సంఖ్య (1 నుండి 2856 వరకు) నమోదు చేసి అసలు ఓటరు వివరాలు మరియు పి.డి.ఎఫ్ పత్రం పొందండి.</p>
+                    <p class="search-desc">వరుస సంఖ్య, ఓటరు పేరు, బంధువు పేరు, ఇంటి సంఖ్య లేదా ఓటరు ఐడి నమోదు చేసి వివరాలు వెతకండి.</p>
                 </div>
 
                 <form id="voterSearchForm" class="search-form" onsubmit="handleSearch(event);">
                     <div class="input-group">
-                        <label for="serialNumberInput" class="input-label">ఓటరు వరుస సంఖ్య నమోదు చేయండి</label>
+                        <label for="searchInput" class="input-label">వరుస సంఖ్య లేదా పేరు నమోదు చేయండి</label>
                         <div class="input-row">
                             <div class="input-wrapper">
                                 <span class="input-icon">🔍</span>
                                 <input 
-                                    type="number" 
-                                    inputmode="numeric"
-                                    pattern="[0-9]*"
-                                    id="serialNumberInput" 
-                                    name="serial_number" 
+                                    type="search"
+                                    inputmode="search"
+                                    id="searchInput"
+                                    name="query"
                                     class="search-input" 
-                                    placeholder="ఓటరు వరుస సంఖ్యను నమోదు చేయండి" 
-                                    min="1" 
-                                    max="2856"
+                                    placeholder="వరుస సంఖ్య, పేరు లేదా ఓటరు ఐడి"
                                     required 
                                     autocomplete="off"
                                 >
@@ -115,21 +112,19 @@
                     </div>
                 </form>
 
-                <!-- Quick Test Numbers -->
-                <div class="quick-test-wrap">
-                    <span class="quick-test-label">ముఖ్యమైన వరుస సంఖ్యలు (పరీక్షార్థం):</span>
-                    <div class="chips-list">
-                        {% for num in [1, 2, 27, 28, 54, 72, 238, 239, 476, 952, 1190, 1428, 1904, 2380, 2618, 2856] %}
-                        <button type="button" class="chip-btn" onclick="quickSearch({{ num }});">{{ num }}</button>
-                        {% endfor %}
-                    </div>
-                </div>
-
                 <!-- Error Box -->
                 <div id="errorBox" class="alert alert-error" style="display: none;">
                     <span class="alert-icon">⚠️</span>
                     <span id="errorMessage" class="alert-text"></span>
                 </div>
+            </div>
+        </section>
+
+        <section id="matchListSection" class="match-list-section" style="display: none;" aria-live="polite">
+            <div class="match-list-card">
+                <h3 id="matchListTitle">సరిపోయే ఓటర్లు</h3>
+                <p>సరైన వ్యక్తిని ఎంచుకుని పూర్తి వివరాలు చూడండి.</p>
+                <div id="matchList" class="match-list"></div>
             </div>
         </section>
 
@@ -148,9 +143,9 @@
                         <h3 class="result-voter-title" id="resultVoterTitle">ఓటరు వివరాలు</h3>
                     </div>
                     <div class="result-actions">
-                        <a id="downloadPdfBtn" href="#" class="btn btn-download" download>
-                            <span class="download-icon">📥</span>
-                            <span class="download-text">PDF డౌన్లోడ్ చేయండి</span>
+                        <a id="printBtn" href="#" class="btn btn-download">
+                            <span class="download-icon">🖨️</span>
+                            <span class="download-text">ప్రింట్ చేయండి</span>
                         </a>
                     </div>
                 </div>
@@ -219,11 +214,10 @@
                             </table>
                         </div>
 
-                        <!-- Secondary Download Button in Details Panel -->
                         <div class="details-footer">
-                            <a id="downloadPdfBtnSecondary" href="#" class="btn btn-download btn-block" download>
-                                <span class="download-icon">📥</span>
-                                <span class="download-text">PDF డౌన్లోడ్ చేయండి</span>
+                            <a id="printBtnSecondary" href="#" class="btn btn-download btn-block">
+                                <span class="download-icon">🖨️</span>
+                                <span class="download-text">ప్రింట్ పేజీ తెరవండి</span>
                             </a>
                         </div>
                     </div>

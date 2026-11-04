@@ -267,6 +267,48 @@ body {
     box-shadow: 0 0 0 3px rgba(27, 94, 32, 0.15);
 }
 
+.match-list-section {
+    max-width: 1080px;
+    margin: 0 auto 24px;
+    padding: 0 20px;
+}
+
+.match-list-card {
+    background: #fff;
+    border: 1px solid #d7e7d9;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(20, 75, 31, .08);
+    padding: 20px;
+}
+
+.match-list-card h3, .match-list-card p { margin-top: 0; }
+
+.match-list {
+    display: grid;
+    gap: 10px;
+}
+
+.match-item {
+    appearance: none;
+    width: 100%;
+    border: 1px solid #c9ddcc;
+    border-radius: 9px;
+    background: #f8fcf8;
+    color: #173b1d;
+    cursor: pointer;
+    padding: 14px;
+    text-align: left;
+}
+
+.match-item:hover, .match-item:focus {
+    border-color: #277434;
+    background: #eef8ef;
+    outline: none;
+}
+
+.match-item strong, .match-item span { display: block; }
+.match-item span { font-size: .9rem; margin-top: 4px; }
+
 .btn {
     display: inline-flex;
     align-items: center;

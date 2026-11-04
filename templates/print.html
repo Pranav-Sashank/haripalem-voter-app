@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ఓటరు వివరాలు – {{ voter.serial_no }}</title>
+    <style>
+        :root { color-scheme: light; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f3f6f3; color: #172117; font-family: "Noto Sans Telugu", "Nirmala UI", sans-serif; }
+        .page { max-width: 760px; margin: 24px auto; padding: 28px; background: #fff; border: 1px solid #d1ddd1; }
+        h1 { margin: 0; font-size: 1.4rem; color: #165c27; }
+        .subhead { margin: 6px 0 20px; color: #4a5d4c; }
+        .actions { display: flex; gap: 10px; margin-bottom: 22px; }
+        button, a { border: 0; border-radius: 6px; padding: 10px 16px; font: inherit; cursor: pointer; text-decoration: none; }
+        button { background: #1b6e2b; color: #fff; }
+        a { background: #e7efe7; color: #173b1d; }
+        .record { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        img { width: 100%; height: auto; border: 1px solid #bbb; }
+        table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+        th, td { padding: 9px; border: 1px solid #cbd5cc; text-align: left; vertical-align: top; }
+        th { width: 45%; background: #f1f7f1; }
+        .notice { margin-top: 20px; padding: 10px; border-top: 1px solid #d1ddd1; text-align: center; font-size: .85rem; color: #475448; }
+        @media (max-width: 600px) { .page { margin: 0; border: 0; padding: 16px; } .record { grid-template-columns: 1fr; } }
+        @media print { body { background: #fff; } .page { max-width: none; margin: 0; border: 0; padding: 0; } .actions { display: none; } }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <h1>హరిపాలెం గ్రామ పంచాయతీ – ఓటరు వివరాలు</h1>
+        <p class="subhead">వరుస సంఖ్య: {{ voter.serial_no }} · వార్డు నెంబరు: {{ voter.ward_no }}</p>
+        <div class="actions">
+            <button type="button" onclick="window.print()">🖨️ ప్రింట్ చేయండి</button>
+            <a href="/">← శోధనకు తిరిగి వెళ్ళండి</a>
+        </div>
+        <div class="record">
+            <section>
+                <img src="/preview/{{ voter.serial_no }}" alt="ఓటరు వరుస సంఖ్య {{ voter.serial_no }} అసలు నమోదు ప్రతి">
+            </section>
+            <section>
+                <table>
+                    <tr><th>ఓటరు వరుస సంఖ్య</th><td>{{ voter.serial_no }}</td></tr>
+                    <tr><th>ఓటరు పేరు</th><td>{{ voter.voter_name or 'లభ్యం కాలేదు' }}</td></tr>
+                    <tr><th>{{ voter.relative_type or 'బంధువు' }} పేరు</th><td>{{ voter.relative_name or 'లభ్యం కాలేదు' }}</td></tr>
+                    <tr><th>వయస్సు</th><td>{{ voter.age or 'లభ్యం కాలేదు' }}</td></tr>
+                    <tr><th>లింగము</th><td>{{ voter.gender or 'లభ్యం కాలేదు' }}</td></tr>
+                    <tr><th>ఇంటి సంఖ్య</th><td>{{ voter.house_no or 'లభ్యం కాలేదు' }}</td></tr>
+                    <tr><th>ఓటరు ఐడి కార్డు నంబరు</th><td>{{ voter.voter_id or 'లభ్యం కాలేదు' }}</td></tr>
+                    <tr><th>అసెంబ్లీ ఓటరు జాబితా సంఖ్య</th><td>{{ voter.assembly_serial or 'లభ్యం కాలేదు' }}</td></tr>
+                </table>
+            </section>
+        </div>
+        <p class="notice">అనధికారిక ఓటరు సమాచారం ప్రతీ — గుర్తింపు పత్రం కాదు</p>
+    </main>
+</body>
+</html>

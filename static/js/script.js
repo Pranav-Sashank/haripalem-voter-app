@@ -1,14 +1,13 @@
 /**
  * Haripalem Voter App - Client-side script
- * Entirely in Telugu, handling search, validation, preview rendering, and downloads.
+ * Entirely in Telugu, handling flexible search, previews, result selection, and printing.
  */
 
 // Error message strings in pure Telugu
 const TELUGU_MESSAGES = {
-    EMPTY_INPUT: "దయచేసి ఓటరు వరుస సంఖ్యను నమోదు చేయండి.",
-    NOT_A_NUMBER: "దయచేసి సరైన సంఖ్యను నమోదు చేయండి. అక్షరాలు లేదా ప్రత్యేక గుర్తులు అనుమతించబడవు.",
+    EMPTY_INPUT: "దయచేసి వరుస సంఖ్య, పేరు లేదా ఓటరు ఐడి నమోదు చేయండి.",
     OUT_OF_RANGE: "ఓటరు వరుస సంఖ్య 1 నుండి 2856 మధ్య మాత్రమే ఉండాలి.",
-    NOT_FOUND: "నమోదు చేసిన వరుస సంఖ్యతో ఓటరు వివరాలు లభించలేదు. దయచేసి సంఖ్యను సరిచూసుకోండి.",
+    NOT_FOUND: "మీ శోధనకు సరిపోయే ఓటరు వివరాలు లభించలేదు.",
     NETWORK_ERROR: "సర్వర్‌తో అనుసంధానం కాలేదు. దయచేసి కాసేపటి తర్వాత మళ్ళీ ప్రయత్నించండి."
 };
 
@@ -29,17 +28,11 @@ function clearError() {
     document.getElementById('errorMessage').textContent = '';
 }
 
-function quickSearch(num) {
-    const input = document.getElementById('serialNumberInput');
-    input.value = num;
-    executeSearch(num);
-}
-
 function handleSearch(event) {
     if (event) {
         event.preventDefault();
     }
-    const input = document.getElementById('serialNumberInput');
+    const input = document.getElementById('searchInput');
     const rawVal = input.value.trim();
     
     // 1. Validate empty
@@ -49,34 +42,27 @@ function handleSearch(event) {
         return;
     }
     
-    // 2. Validate numeric
-    const num = Number(rawVal);
-    if (!/^\d+$/.test(rawVal) || isNaN(num)) {
-        showError(TELUGU_MESSAGES.NOT_A_NUMBER);
-        input.focus();
-        return;
-    }
-    
-    // 3. Validate range (1 to 2856)
-    if (num < 1 || num > 2856) {
+    if (/^\d+$/.test(rawVal) && (Number(rawVal) < 1 || Number(rawVal) > 2856)) {
         showError(TELUGU_MESSAGES.OUT_OF_RANGE);
         input.focus();
         return;
     }
     
-    executeSearch(num);
+    executeSearch(rawVal);
 }
 
-async function executeSearch(serialNo) {
+async function executeSearch(query) {
     clearError();
     
     const loadingBox = document.getElementById('loadingBox');
     const resultSection = document.getElementById('resultSection');
+    const matchListSection = document.getElementById('matchListSection');
     const searchBtn = document.getElementById('searchBtn');
     
     // Show loading
     loadingBox.style.display = 'block';
     resultSection.style.display = 'none';
+    matchListSection.style.display = 'none';
     searchBtn.disabled = true;
     
     try {
@@ -86,7 +72,7 @@ async function executeSearch(serialNo) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({ serial_number: serialNo })
+            body: JSON.stringify({ query })
         });
         
         const data = await response.json();
@@ -97,8 +83,11 @@ async function executeSearch(serialNo) {
             return;
         }
         
-        // Populate results
-        displayResult(data);
+        if (data.match_type === 'list') {
+            displayMatchList(data.voters);
+        } else {
+            displayResult(data);
+        }
         
     } catch (err) {
         console.error('Search error:', err);
@@ -107,6 +96,34 @@ async function executeSearch(serialNo) {
         loadingBox.style.display = 'none';
         searchBtn.disabled = false;
     }
+}
+
+function displayMatchList(voters) {
+    const list = document.getElementById('matchList');
+    const title = document.getElementById('matchListTitle');
+    title.textContent = `${voters.length} సరిపోయే ఓటర్లు లభించారు`;
+    list.replaceChildren();
+
+    voters.forEach((voter) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'match-item';
+        button.innerHTML = `<strong>${escapeHtml(voter.voter_name || 'పేరు లభ్యం కాలేదు')}</strong>
+            <span>వరుస సంఖ్య: ${voter.serial_no} · వార్డు: ${voter.ward_no || '-'}</span>
+            <span>${escapeHtml(voter.relative_type || 'బంధువు')} పేరు: ${escapeHtml(voter.relative_name || 'లభ్యం కాలేదు')}</span>`;
+        button.addEventListener('click', () => executeSearch(String(voter.serial_no)));
+        list.appendChild(button);
+    });
+
+    const section = document.getElementById('matchListSection');
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value);
+    return div.innerHTML;
 }
 
 function displayResult(data) {
@@ -150,14 +167,9 @@ function displayResult(data) {
     document.getElementById('detailAssemblySerial').textContent = voter.assembly_serial ? `32 - ${voter.assembly_serial}` : (voter.assembly_serial || 'లభ్యం కాలేదు');
     document.getElementById('detailWardNo').textContent = voter.ward_no || '1';
     
-    // Download Buttons
-    const downloadUrl = data.download_url || `/download/${voter.serial_no}`;
-    const btn1 = document.getElementById('downloadPdfBtn');
-    const btn2 = document.getElementById('downloadPdfBtnSecondary');
-    btn1.href = downloadUrl;
-    btn2.href = downloadUrl;
-    btn1.setAttribute('download', `haripalem_voter_${voter.serial_no}.pdf`);
-    btn2.setAttribute('download', `haripalem_voter_${voter.serial_no}.pdf`);
+    const printUrl = data.print_url || `/print/${voter.serial_no}`;
+    document.getElementById('printBtn').href = printUrl;
+    document.getElementById('printBtnSecondary').href = printUrl;
     
     // Show Result Section
     const resultSection = document.getElementById('resultSection');

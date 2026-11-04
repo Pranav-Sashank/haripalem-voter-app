@@ -1,6 +1,6 @@
 """
 PDF Processor & Database Indexing Service for Haripalem Voter Information System.
-Builds and maintains SQLite database cache for instant serial number lookup.
+Builds and maintains SQLite database cache for instant serial number and name lookup.
 """
 
 import os
@@ -17,6 +17,25 @@ def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def clean_telugu(text):
+    """Clean duplicate vowel diacritics and normalize whitespace."""
+    if not text:
+        return ''
+    # Replace duplicate Telugu vowel signs / virama with single occurrence
+    text = re.sub(r'([\u0C3E-\u0C4D])\1+', r'\1', text)
+    # Clean whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+def normalize_search(text):
+    """Normalize text for fuzzy Telugu and alphanumeric search (no spaces/symbols)."""
+    if not text:
+        return ''
+    cleaned = clean_telugu(text)
+    # Strip spaces and punctuation
+    normalized = re.sub(r'[\s\.\,\-_/]+', '', cleaned).lower()
+    return normalized
 
 def extract_serial_from_box(page, box):
     text = page.get_text('text', clip=box)
@@ -62,14 +81,14 @@ def extract_voter_details(page, box):
     name = ''
     m = re.search(r'ఓటరు\s*పేరు\s*[:\s]+([^:]+?)(?=(తండ్రి|భర్త|తల్లి|ఇంటి|వయస్సు|లింగము|ఓటరు\s*ఐడి|$))', full)
     if m:
-        name = m.group(1).strip()
+        name = clean_telugu(m.group(1))
         
     rel_type = ''
     rel_name = ''
     m = re.search(r'(తండ్రి|భర్త|తల్లి)[\s\u0c3f]*పేరు\s*[:\s]+([^:]+?)(?=(వయస్సు|లింగము|ఇంటి|ఓటరు\s*ఐడి|$))', full)
     if m:
         rel_type = m.group(1).strip()
-        rel_name = m.group(2).strip()
+        rel_name = clean_telugu(m.group(2))
         
     age = ''
     m = re.search(r'వయస్సు\s*[:\s]+(\d+)', full)
@@ -99,8 +118,10 @@ def extract_voter_details(page, box):
         'assembly_serial': assembly_serial,
         'voter_id': voter_id,
         'name': name,
+        'normalized_name': normalize_search(name),
         'relative_type': rel_type,
         'relative_name': rel_name,
+        'normalized_relative': normalize_search(rel_name),
         'age': age,
         'gender': gender,
         'house_no': house_no,
@@ -125,8 +146,10 @@ def init_database(force_reindex=False):
         box_x1 REAL,
         box_y1 REAL,
         voter_name TEXT,
+        normalized_name TEXT,
         relative_type TEXT,
         relative_name TEXT,
+        normalized_relative TEXT,
         age TEXT,
         gender TEXT,
         house_no TEXT,
@@ -137,6 +160,11 @@ def init_database(force_reindex=False):
     )
     ''')
     
+    # Older deployed indexes may not have normalized columns. They remain searchable
+    # through the compatible fallback in search_voters, so do not rebuild on startup.
+    c.execute("PRAGMA table_info(voters)")
+    cols = [row['name'] for row in c.fetchall()]
+
     c.execute('SELECT COUNT(*) FROM voters')
     count = c.fetchone()[0]
     
@@ -191,8 +219,10 @@ def init_database(force_reindex=False):
                         box.x1,
                         box.y1,
                         data['name'],
+                        data['normalized_name'],
                         data['relative_type'],
                         data['relative_name'],
+                        data['normalized_relative'],
                         data['age'],
                         data['gender'],
                         data['house_no'],
@@ -206,10 +236,10 @@ def init_database(force_reindex=False):
     INSERT OR REPLACE INTO voters (
         serial_no, page_no, page_index, row_idx, col_idx,
         box_x0, box_y0, box_x1, box_y1,
-        voter_name, relative_type, relative_name,
+        voter_name, normalized_name, relative_type, relative_name, normalized_relative,
         age, gender, house_no, voter_id,
         assembly_serial, ward_no, raw_text
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', records)
     
     conn.commit()
@@ -227,7 +257,7 @@ def get_voter_by_serial(serial_no):
         row = c.fetchone()
     except sqlite3.OperationalError:
         conn.close()
-        init_database()
+        init_database(force_reindex=True)
         conn = get_db_connection()
         c = conn.cursor()
         c.execute('SELECT * FROM voters WHERE serial_no = ?', (serial_no,))
@@ -236,6 +266,89 @@ def get_voter_by_serial(serial_no):
     if row:
         return dict(row)
     return None
+
+def search_voters(query_str, limit=50):
+    """
+    Search voters by Serial Number (if integer) OR by Name / Relative Name / EPIC ID.
+    Returns: (match_type, list_of_voters)
+    match_type: 'exact' (single voter found by serial), 'list' (matching voters), or 'none'
+    """
+    if not query_str:
+        return 'none', []
+
+    q = str(query_str).strip()
+
+    # 1. Check if query is a pure integer serial number
+    if q.isdigit():
+        num = int(q)
+        if 1 <= num <= 2856:
+            voter = get_voter_by_serial(num)
+            if voter:
+                return 'exact', [voter]
+
+    if not os.path.exists(DB_PATH):
+        init_database()
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("PRAGMA table_info(voters)")
+    column_names = {row['name'] for row in c.fetchall()}
+
+    norm_q = normalize_search(q)
+
+    # Check if EPIC ID (e.g., XOO... or MZV...)
+    c.execute('''
+        SELECT * FROM voters
+        WHERE voter_id LIKE ?
+        LIMIT ?
+    ''', (f"%{q}%", limit))
+    id_matches = [dict(r) for r in c.fetchall()]
+    if id_matches:
+        conn.close()
+        return ('exact', id_matches) if len(id_matches) == 1 else ('list', id_matches)
+
+    # Older deployed indexes lack normalized columns. In that case, compare a
+    # normalized in-memory representation so incidental PDF extraction spaces
+    # and duplicate vowel marks do not prevent a name from being found.
+    if 'normalized_name' not in column_names:
+        rows = [dict(row) for row in c.execute('SELECT * FROM voters ORDER BY serial_no ASC').fetchall()]
+        conn.close()
+        matches = [
+            row for row in rows
+            if any(
+                norm_q in normalize_search(row.get(field, ''))
+                for field in ('voter_name', 'relative_name', 'voter_id', 'house_no')
+            )
+        ][:limit]
+        if len(matches) == 1:
+            return 'exact', matches
+        return ('list', matches) if matches else ('none', [])
+
+    # Search efficiently using normalized columns when they are available.
+    where_clauses = ['voter_name LIKE ?', 'relative_name LIKE ?', 'house_no LIKE ?']
+    params = [f"%{q}%", f"%{q}%", f"%{q}%"]
+    if 'normalized_name' in column_names:
+        where_clauses.append('normalized_name LIKE ?')
+        params.append(f"%{norm_q}%")
+    if 'normalized_relative' in column_names:
+        where_clauses.append('normalized_relative LIKE ?')
+        params.append(f"%{norm_q}%")
+
+    c.execute(
+        f"SELECT * FROM voters WHERE {' OR '.join(where_clauses)} "
+        "ORDER BY serial_no ASC LIMIT ?",
+        (*params, limit)
+    )
+
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+
+    if len(rows) == 1:
+        return 'exact', rows
+    elif len(rows) > 1:
+        return 'list', rows
+    else:
+        return 'none', []
 
 def get_village_statistics():
     if not os.path.exists(DB_PATH):
@@ -253,7 +366,7 @@ def get_village_statistics():
         wards = c.fetchone()[0]
     except sqlite3.OperationalError:
         conn.close()
-        init_database()
+        init_database(force_reindex=True)
         return get_village_statistics()
     conn.close()
     return {
