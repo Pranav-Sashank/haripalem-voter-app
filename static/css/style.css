@@ -91,6 +91,25 @@ body {
     font-weight: 500;
 }
 
+.logout-form {
+    margin-left: auto;
+}
+
+.logout-form button {
+    padding: 8px 12px;
+    border: 1px solid var(--primary-border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--primary-green);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.logout-form button:hover {
+    background: var(--primary-soft);
+}
+
 /* Main Content */
 .main-content {
     flex: 1;

@@ -9,10 +9,18 @@ import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.stdout.reconfigure(encoding='utf-8')
+TEST_ACCESS_PASSWORD = 'test-only-password'
+os.environ['ACCESS_PASSWORD'] = TEST_ACCESS_PASSWORD
 
 from app import app
 from services.pdf_processor import get_village_statistics
 import fitz
+
+def authenticated_client():
+    client = app.test_client()
+    response = client.post('/login', data={'password': TEST_ACCESS_PASSWORD}, follow_redirects=False)
+    assert response.status_code == 302
+    return client
 
 def test_village_statistics():
     print("Testing village statistics...")
@@ -26,7 +34,7 @@ def test_village_statistics():
 
 def test_index_route():
     print("Testing index route (GET /)...")
-    client = app.test_client()
+    client = authenticated_client()
     resp = client.get('/')
     assert resp.status_code == 200
     html = resp.data.decode('utf-8')
@@ -37,7 +45,7 @@ def test_index_route():
 
 def test_search_validations():
     print("Testing search input validations...")
-    client = app.test_client()
+    client = authenticated_client()
     
     # 1. Empty input
     resp = client.post('/search', json={'query': ''})
@@ -92,7 +100,7 @@ REQUIRED_TEST_SERIALS = [
 
 def test_all_16_required_serials():
     print("\nTesting 16 mandatory serial numbers required by specification...")
-    client = app.test_client()
+    client = authenticated_client()
 
     for sl, exp_page, exp_row, exp_col, exp_name_sub, exp_id in REQUIRED_TEST_SERIALS:
         # 1. Search endpoint

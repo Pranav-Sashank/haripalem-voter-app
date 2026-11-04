@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1b5e20">
+    <title>సైన్ ఇన్ – హరిపాలెం ఓటర్లు</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 20px; background: #edf5ee; color: #16351b; font-family: "Noto Sans Telugu", "Nirmala UI", sans-serif; }
+        .login-card { width: min(100%, 420px); padding: 32px; background: #fff; border: 1px solid #c8ddcb; border-radius: 16px; box-shadow: 0 10px 30px rgba(19, 86, 33, .12); }
+        h1 { margin: 0 0 10px; color: #176c29; font-size: 1.45rem; }
+        p { margin: 0 0 24px; color: #4d6350; line-height: 1.6; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; }
+        input { width: 100%; padding: 13px; border: 1px solid #a9c9ae; border-radius: 8px; font: inherit; }
+        input:focus { outline: 3px solid #cdebd2; border-color: #248339; }
+        button { width: 100%; margin-top: 16px; padding: 13px; border: 0; border-radius: 8px; background: #176c29; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+        .error { margin: 14px 0 0; color: #b42318; }
+    </style>
+</head>
+<body>
+    <main class="login-card">
+        <h1>హరిపాలెం ఓటర్ల శోధన</h1>
+        <p>వివరాలు చూడడానికి పాస్‌వర్డ్ నమోదు చేయండి.</p>
+        <form method="post">
+            <input type="hidden" name="next" value="{{ next_page }}">
+            <label for="password">పాస్‌వర్డ్</label>
+            <input id="password" name="password" type="password" inputmode="numeric" autocomplete="current-password" required autofocus>
+            <button type="submit">సైన్ ఇన్ చేయండి</button>
+        </form>
+        {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    </main>
+</body>
+</html>
