@@ -37,6 +37,76 @@ def normalize_search(text):
     normalized = re.sub(r'[\s\.\,\-_/]+', '', cleaned).lower()
     return normalized
 
+
+# Roman spellings of Telugu names are not standardized (for example,
+# "Satyavathi", "Satyavati", and "Satyavatee" are all common). These maps
+# deliberately use a compact phonetic form, rather than formal transliteration,
+# so ordinary English keyboard searches remain useful.
+TELUGU_CONSONANTS = {
+    'క': 'k', 'ఖ': 'k', 'గ': 'g', 'ఘ': 'g', 'ఙ': 'ng',
+    'చ': 'c', 'ఛ': 'c', 'జ': 'j', 'ఝ': 'j', 'ఞ': 'n',
+    'ట': 't', 'ఠ': 't', 'డ': 'd', 'ఢ': 'd', 'ణ': 'n',
+    'త': 't', 'థ': 't', 'ద': 'd', 'ధ': 'd', 'న': 'n',
+    'ప': 'p', 'ఫ': 'f', 'బ': 'b', 'భ': 'b', 'మ': 'm',
+    'య': 'y', 'ర': 'r', 'ఱ': 'r', 'ల': 'l', 'ళ': 'l', 'వ': 'v',
+    'శ': 's', 'ష': 's', 'స': 's', 'హ': 'h',
+}
+TELUGU_VOWELS = {
+    'అ': 'a', 'ఆ': 'a', 'ఇ': 'i', 'ఈ': 'i', 'ఉ': 'u', 'ఊ': 'u',
+    'ఋ': 'ri', 'ఎ': 'e', 'ఏ': 'e', 'ఐ': 'e', 'ఒ': 'o', 'ఓ': 'o', 'ఔ': 'o',
+}
+TELUGU_VOWEL_SIGNS = {
+    'ా': 'a', 'ి': 'i', 'ీ': 'i', 'ు': 'u', 'ూ': 'u', 'ృ': 'ri',
+    'ె': 'e', 'ే': 'e', 'ై': 'e', 'ొ': 'o', 'ో': 'o', 'ౌ': 'o',
+}
+
+
+def normalize_english_search(text):
+    """Normalize informal Roman spellings into a comparable phonetic key."""
+    value = str(text or '').lower()
+    value = re.sub(r'[^a-z]', '', value)
+    # Treat common English spelling variants of the same Telugu sound alike.
+    for source, replacement in (
+        ('tth', 't'), ('th', 't'), ('dh', 'd'), ('bh', 'b'),
+        ('ph', 'f'), ('kh', 'k'), ('gh', 'g'), ('ch', 'c'), ('sh', 's'),
+        ('w', 'v'), ('aa', 'a'), ('ee', 'i'), ('ii', 'i'),
+        ('oo', 'u'), ('uu', 'u'), ('ou', 'o'), ('ai', 'e'), ('au', 'o'),
+    ):
+        value = value.replace(source, replacement)
+    return value
+
+
+def transliterate_telugu(text):
+    """Return a compact English phonetic spelling for a Telugu name."""
+    result = []
+    chars = list(clean_telugu(text))
+    index = 0
+    while index < len(chars):
+        char = chars[index]
+        if char in TELUGU_CONSONANTS:
+            next_char = chars[index + 1] if index + 1 < len(chars) else ''
+            result.append(TELUGU_CONSONANTS[char])
+            if next_char == '్':
+                index += 2
+                continue
+            if next_char in TELUGU_VOWEL_SIGNS:
+                result.append(TELUGU_VOWEL_SIGNS[next_char])
+                index += 2
+                continue
+            result.append('a')
+        elif char in TELUGU_VOWELS:
+            result.append(TELUGU_VOWELS[char])
+        elif char in ('ం', 'ఁ'):
+            # English spellings usually represent this nasal sound as "n"
+            # (Anjali, Shashank, Kandregula).
+            result.append('n')
+        elif char == 'ః':
+            result.append('h')
+        else:
+            result.append(char)
+        index += 1
+    return normalize_english_search(''.join(result))
+
 def extract_serial_from_box(page, box):
     text = page.get_text('text', clip=box)
     lines = [l.strip() for l in text.splitlines() if l.strip()]
@@ -306,6 +376,27 @@ def search_voters(query_str, limit=50):
     if id_matches:
         conn.close()
         return ('exact', id_matches) if len(id_matches) == 1 else ('list', id_matches)
+
+    # English keyboard search: compare the typed Roman spelling with phonetic
+    # forms generated from both the voter and relative names. This is kept
+    # in-memory so existing databases work immediately without re-indexing.
+    if re.search(r'[A-Za-z]', q):
+        english_query = normalize_english_search(q)
+        if english_query:
+            all_rows = [dict(row) for row in c.execute(
+                'SELECT * FROM voters ORDER BY serial_no ASC'
+            ).fetchall()]
+            english_matches = [
+                row for row in all_rows
+                if english_query in transliterate_telugu(row.get('voter_name', ''))
+                or english_query in transliterate_telugu(row.get('relative_name', ''))
+            ][:limit]
+            if english_matches:
+                conn.close()
+                return (
+                    ('exact', english_matches)
+                    if len(english_matches) == 1 else ('list', english_matches)
+                )
 
     # Older deployed indexes lack normalized columns. In that case, compare a
     # normalized in-memory representation so incidental PDF extraction spaces

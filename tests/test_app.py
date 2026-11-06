@@ -80,6 +80,23 @@ def test_search_validations():
     assert data['match_type'] in ('exact', 'list')
     print("  ✓ Name search passed.")
 
+    # Roman-English spelling of the Telugu voter name also works.
+    resp = client.post('/search', json={'query': 'Satyavathi Paila'})
+    assert resp.status_code == 200
+    data = json.loads(resp.data)
+    assert data['success'] is True
+    assert data['match_type'] == 'exact'
+    assert data['voter']['serial_no'] == 1
+    print("  ✓ English name search passed.")
+
+    resp = client.post('/search', json={'query': 'Anjali Dosuru'})
+    assert resp.status_code == 200
+    data = json.loads(resp.data)
+    assert data['success'] is True
+    assert data['match_type'] == 'exact'
+    assert data['voter']['serial_no'] == 2
+    print("  ✓ Additional English spelling search passed.")
+
 REQUIRED_TEST_SERIALS = [
     (1, 3, 0, 0, 'సత్యవతీ పైలా', 'XOO0422949'),
     (2, 3, 0, 1, 'అంజలి దోసూరు', 'XOO1333954'),
