@@ -76,6 +76,23 @@ def normalize_english_search(text):
     return value
 
 
+def english_search_keys(text):
+    """Return equivalent keys for common standard English Telugu spellings."""
+    key = normalize_english_search(text)
+    if not key:
+        return set()
+
+    keys = {key}
+    # The Telugu ending రావు is commonly written as "Rao" in English, while
+    # the direct phonetic rendering used by the source data is "ravu".
+    # Support both without changing the original Telugu record.
+    if 'rao' in key:
+        keys.add(key.replace('rao', 'ravu'))
+    if 'ravu' in key:
+        keys.add(key.replace('ravu', 'rao'))
+    return keys
+
+
 def transliterate_telugu(text):
     """Return a compact English phonetic spelling for a Telugu name."""
     result = []
@@ -381,15 +398,18 @@ def search_voters(query_str, limit=50):
     # forms generated from both the voter and relative names. This is kept
     # in-memory so existing databases work immediately without re-indexing.
     if re.search(r'[A-Za-z]', q):
-        english_query = normalize_english_search(q)
-        if english_query:
+        english_queries = english_search_keys(q)
+        if english_queries:
             all_rows = [dict(row) for row in c.execute(
                 'SELECT * FROM voters ORDER BY serial_no ASC'
             ).fetchall()]
             english_matches = [
                 row for row in all_rows
-                if english_query in transliterate_telugu(row.get('voter_name', ''))
-                or english_query in transliterate_telugu(row.get('relative_name', ''))
+                if any(
+                    english_query in transliterate_telugu(row.get(field, ''))
+                    for english_query in english_queries
+                    for field in ('voter_name', 'relative_name')
+                )
             ][:limit]
             if english_matches:
                 conn.close()

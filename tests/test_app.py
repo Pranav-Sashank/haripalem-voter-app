@@ -97,6 +97,16 @@ def test_search_validations():
     assert data['voter']['serial_no'] == 2
     print("  ✓ Additional English spelling search passed.")
 
+    # Standard English spelling "Rao" matches the Telugu Rao / రావు ending.
+    resp = client.post('/search', json={'query': 'Apparao Muppidi'})
+    assert resp.status_code == 200
+    data = json.loads(resp.data)
+    assert data['success'] is True
+    # More than one voter shares this name, so the UI returns a chooser.
+    assert data['match_type'] == 'list'
+    assert any(voter['serial_no'] == 54 for voter in data['voters'])
+    print("  ✓ Standard English Rao spelling search passed.")
+
 REQUIRED_TEST_SERIALS = [
     (1, 3, 0, 0, 'సత్యవతీ పైలా', 'XOO0422949'),
     (2, 3, 0, 1, 'అంజలి దోసూరు', 'XOO1333954'),
